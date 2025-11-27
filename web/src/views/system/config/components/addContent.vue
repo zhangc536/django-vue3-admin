@@ -141,7 +141,7 @@ const associationTableUpdate = () => {
 	return new Promise(function (resolve, reject) {
 		if (associationTableRef) {
 			if (!associationTableRef.onSubmit()) {
-				// eslint-disable-next-line prefer-promise-reject-errors
+				 
 				return reject(false);
 			}
 			const { formObj } = associationTableRef;

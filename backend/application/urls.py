@@ -118,7 +118,7 @@ urlpatterns = (
             path('web/', web_view, name='web_view'),
             path('web/<path:filename>', serve_web_files, name='serve_web_files'),
             # sse
-            path('sse/', sse_view, name='sse'),
+            path('api/sse/', sse_view, name='sse'),
         ]
         + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
         + static(settings.STATIC_URL, document_root=settings.STATIC_URL)

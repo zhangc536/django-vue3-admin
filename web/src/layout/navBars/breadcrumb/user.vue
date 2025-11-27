@@ -82,7 +82,7 @@
 </template>
 
 <script setup lang="ts" name="layoutBreadcrumbUser">
-import { defineAsyncComponent, ref, computed, reactive, onMounted, unref, watch } from 'vue';
+import { defineAsyncComponent, ref, computed, reactive, onMounted, unref, watch, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessageBox, ElMessage } from 'element-plus';
 import screenfull from 'screenfull';
@@ -208,11 +208,17 @@ const initI18nOrSize = (value: string, attr: keyof typeof state) => {
 };
 // 页面加载时
 onMounted(() => {
-	if (Local.get('themeConfig')) {
-		initI18nOrSize('globalComponentSize', 'disabledSize');
-		initI18nOrSize('globalI18n', 'disabledI18n');
-	}
-	getMessageCenterCount();
+    if (Local.get('themeConfig')) {
+        initI18nOrSize('globalComponentSize', 'disabledSize');
+        initI18nOrSize('globalI18n', 'disabledI18n');
+    }
+    getMessageCenterCount();
+});
+onUnmounted(() => {
+    if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+    }
 });
 
 //消息中心的未读数量
@@ -223,29 +229,19 @@ let eventSource: EventSource | null = null; // 存储 EventSource 实例
 const token = Session.get('token');
 const isConnected = ref(false); // 标志变量，记录是否已连接过
 const getMessageCenterCount = () => {
-	// 创建 EventSource 实例并连接到后端 SSE 端点
-	eventSource = new EventSource(`${getBaseURL()}sse/?token=${token}`); // 替换为你的后端地址
-	// 首次连接成功时打印一次
-	eventSource.onopen = function () {
-		if (!isConnected.value) {
-			console.log('SSE 首次连接成功');
-			isConnected.value = true; // 设置标志为已连接
-		}
-	};
-	// 监听消息事件
-	eventSource.onmessage = function (event) {
-		console.log(event.data);
-
-		messageCenter.setUnread(+event.data); // 更新总记录数
-	};
-
-	// 错误处理
-	eventSource.onerror = function (err) {
-		console.error('SSE 错误:', err);
-		if (eventSource !== null && eventSource.readyState === EventSource.CLOSED) {
-			console.log('连接已关闭');
-		}
-	};
+    if (!token) return;
+    const url = getBaseURL(`api/sse/?token=${token}`);
+    if (eventSource) return;
+    eventSource = new EventSource(url);
+    eventSource.onopen = function () {
+        if (!isConnected.value) {
+            isConnected.value = true;
+        }
+    };
+    eventSource.onmessage = function (event) {
+        messageCenter.setUnread(+event.data);
+    };
+    eventSource.onerror = function () {};
 };
 </script>
 

@@ -100,13 +100,13 @@ WSGI_APPLICATION = "application.wsgi.application"
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
 DATABASES = {
-    "default": {
-        "ENGINE": DATABASE_ENGINE,
-        "NAME": DATABASE_NAME,
-        "USER": DATABASE_USER,
-        "PASSWORD": DATABASE_PASSWORD,
-        "HOST": DATABASE_HOST,
-        "PORT": DATABASE_PORT,
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',  # 使用 PostgreSQL 数据库
+        'NAME': 'dvadmin',  # 数据库名称
+        'USER': 'dvuser',   # 数据库用户名
+        'PASSWORD': '123456',  # 数据库密码
+        'HOST': '127.0.0.1',  # 数据库主机（本地）
+        'PORT': '5432',  # PostgreSQL 默认端口
     }
 }
 AUTH_USER_MODEL = "system.Users"

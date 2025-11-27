@@ -19,6 +19,8 @@ from dvadmin.system.views.system_config import SystemConfigViewSet
 from dvadmin.system.views.user import UserViewSet
 from dvadmin.system.views.menu_field import MenuFieldViewSet
 from dvadmin.system.views.download_center import DownloadCenterViewSet
+from dvadmin.system.views.customer import CustomerViewSet
+from dvadmin.system.views.finance import FinanceViewSet
 
 system_url = routers.SimpleRouter()
 system_url.register(r'menu', MenuViewSet)
@@ -38,6 +40,8 @@ system_url.register(r'role_menu_permission', RoleMenuPermissionViewSet)
 system_url.register(r'column', MenuFieldViewSet)
 system_url.register(r'login_log', LoginLogViewSet)
 system_url.register(r'download_center', DownloadCenterViewSet)
+system_url.register(r'customer', CustomerViewSet)
+system_url.register(r'finance', FinanceViewSet)
 
 
 urlpatterns = [

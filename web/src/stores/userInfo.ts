@@ -52,23 +52,10 @@ export const useUserInfo = defineStore('userInfo', {
 			Session.set('userInfo', this.userInfos);
 		},
 		async setUserInfos() {
-			// 存储用户信息到浏览器缓存
 			if (Session.get('userInfo')) {
 				this.userInfos = Session.get('userInfo');
 			} else {
-				let userInfos: any = await this.getApiUserInfo();
-				this.userInfos.id = userInfos.id;
-				this.userInfos.username = userInfos.data.name;
-				this.userInfos.avatar = userInfos.data.avatar;
-				this.userInfos.name = userInfos.data.name;
-				this.userInfos.email = userInfos.data.email;
-				this.userInfos.mobile = userInfos.data.mobile;
-				this.userInfos.gender = userInfos.data.gender;
-				this.userInfos.dept_info = userInfos.data.dept_info;
-				this.userInfos.role_info = userInfos.data.role_info;
-				this.userInfos.pwd_change_count = userInfos.data.pwd_change_count;
-				this.userInfos.is_superuser = userInfos.data.is_superuser;
-				Session.set('userInfo', this.userInfos);
+				await this.getApiUserInfo();
 			}
 		},
 		async getApiUserInfo() {
@@ -76,18 +63,21 @@ export const useUserInfo = defineStore('userInfo', {
 				url: '/api/system/user/user_info/',
 				method: 'get',
 			}).then((res:any)=>{
-				this.userInfos.id = res.data.id;
-				this.userInfos.username = res.data.name;
-				this.userInfos.avatar = (res.data.avatar && getBaseURL(res.data.avatar)) || headerImage;
-				this.userInfos.name = res.data.name;
-				this.userInfos.email = res.data.email;
-				this.userInfos.mobile = res.data.mobile;
-				this.userInfos.gender = res.data.gender;
-				this.userInfos.dept_info = res.data.dept_info;
-				this.userInfos.role_info = res.data.role_info;
-				this.userInfos.pwd_change_count = res.data.pwd_change_count;
-				this.userInfos.is_superuser = res.data.is_superuser;
+				const data = res && res.data ? res.data : null;
+				if (!data) return null;
+				this.userInfos.id = data.id;
+				this.userInfos.username = data.name;
+				this.userInfos.avatar = (data.avatar && getBaseURL(data.avatar)) || headerImage;
+				this.userInfos.name = data.name;
+				this.userInfos.email = data.email;
+				this.userInfos.mobile = data.mobile;
+				this.userInfos.gender = data.gender;
+				this.userInfos.dept_info = data.dept_info;
+				this.userInfos.role_info = data.role_info;
+				this.userInfos.pwd_change_count = data.pwd_change_count;
+				this.userInfos.is_superuser = data.is_superuser;
 				Session.set('userInfo', this.userInfos);
+				return data;
 			})
 		},
 	},

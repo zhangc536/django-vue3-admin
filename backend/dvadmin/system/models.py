@@ -1,6 +1,7 @@
 import hashlib
 import os
 from time import time
+from datetime import date
 from pathlib import PurePosixPath
 
 from django.contrib.auth.models import AbstractUser, UserManager
@@ -467,6 +468,32 @@ class FileList(CoreModel):
         verbose_name_plural = verbose_name
         ordering = ("-create_datetime",)
 
+
+class Customer(CoreModel):
+    name = models.CharField(max_length=64, verbose_name="客户名称", help_text="客户名称")
+    device = models.BigIntegerField(null=True, blank=True, verbose_name="设备", help_text="设备，仅允许数字")
+    amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name="收款金额", help_text="收款金额")
+    status = models.BooleanField(default=True, verbose_name="状态", help_text="状态")
+    remark = models.CharField(max_length=500, null=True, blank=True, verbose_name="备注", help_text="备注")
+    date = models.DateField(default=date.today, null=True, blank=True, verbose_name="日期", help_text="日期")
+
+    class Meta:
+        db_table = table_prefix + "system_customer"
+        verbose_name = "客户"
+        verbose_name_plural = verbose_name
+        ordering = ("-create_datetime",)
+
+
+class Finance(CoreModel):
+    date = models.DateField(verbose_name="日期", help_text="日期")
+    customer_name = models.CharField(max_length=64, verbose_name="客户姓名", help_text="客户姓名")
+    amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="金额", help_text="金额")
+
+    class Meta:
+        db_table = table_prefix + "system_finance"
+        verbose_name = "财务信息"
+        verbose_name_plural = verbose_name
+        ordering = ("-date",)
 
 class Area(CoreModel):
     name = models.CharField(max_length=100, verbose_name="名称", help_text="名称")

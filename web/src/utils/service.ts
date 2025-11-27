@@ -21,23 +21,23 @@ function createService() {
 		headers: {
 			'Content-Type': 'application/json;charset=utf-8',
 		},
-		paramsSerializer: {
-			serialize(params) {
-				interface paramsObj {
-					[key: string]: any;
-				}
-				let result: paramsObj = {};
-				for (const [key, value] of Object.entries(params)) {
-					if (value !== '') {
-						result[key] = value;
-					}
-					if (typeof value === 'boolean') {
-						result[key] = value ? 'True' : 'False';
-					}
-				}
-				return qs.stringify(result);
-			},
-		},
+        paramsSerializer: {
+            serialize(params) {
+                interface paramsObj {
+                    [key: string]: any;
+                }
+                let result: paramsObj = {};
+                for (const [key, value] of Object.entries(params)) {
+                    if (value !== '') {
+                        result[key] = value;
+                    }
+                    if (typeof value === 'boolean') {
+                        result[key] = value ? 'True' : 'False';
+                    }
+                }
+                return qs.stringify(result, { arrayFormat: 'repeat' });
+            },
+        },
 	});
 	// 请求拦截
 	service.interceptors.request.use(
@@ -56,6 +56,15 @@ function createService() {
 			}
 			// dataAxios 是 axios 返回数据中的 data
 			const dataAxios = response.data;
+			const headers = response.headers || {};
+			const ct = headers['content-type'] || headers['Content-Type'] || '';
+			const isHtmlPayload =
+				(typeof dataAxios === 'string' && (/^\s*<!DOCTYPE html>/i.test(dataAxios) || /^\s*<html[\s>]/i.test(dataAxios))) ||
+				/text\/html/i.test(ct);
+			if (isHtmlPayload) {
+				errorCreate(`非标准返回（HTML）：${response.config.url}`);
+				return Promise.reject({ msg: '非标准HTML返回', url: response.config.url });
+			}
 			// 这个状态码是和后端约定的
 			const { code } = dataAxios;
 			// swagger判断
@@ -64,8 +73,7 @@ function createService() {
 			}
 			// 根据 code 进行判断
 			if (code === undefined) {
-				// 如果没有 code 代表这不是项目后端开发的接口
-				errorCreate(`非标准返回：${dataAxios}， ${response.config.url}`, false);
+				// 如果没有 code 代表这不是项目后端开发的接口，直接返回原始数据
 				return dataAxios;
 			} else {
 				// 有 code 代表这是一个后端接口 可以进行进一步的判断
@@ -108,6 +116,9 @@ function createService() {
 		},
 		(error) => {
 			const status = get(error, 'response.status');
+			if (status === 401) {
+				return Promise.reject(error);
+			}
 			switch (status) {
 				case 400:
 					error.message = '请求错误';
@@ -175,9 +186,9 @@ function createRequestFunction(service: any) {
 				'Content-Type': 'application/json',
 			},
 			timeout: 5000,
-			baseURL: getBaseURL(),
-			data: {},
-		};
+            baseURL: getBaseURL(),
+            data: {},
+        };
 		Object.assign(configDefault, config);
 		// const token = userStore.getToken;
 		const token = Session.get('token');

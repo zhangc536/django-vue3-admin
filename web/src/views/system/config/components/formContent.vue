@@ -45,6 +45,7 @@
               :key="index + 2"
               :type="item.form_item_type_label"
               :placeholder="item.placeholder"
+              :value-format="item.form_item_type_label === 'datetime' ? 'YYYY-MM-DD HH:mm:ss' : (item.form_item_type_label === 'date' ? 'YYYY-MM-DD' : 'HH:mm:ss')"
           >
           </el-date-picker>
           <!--    select      -->

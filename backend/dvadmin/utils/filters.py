@@ -8,6 +8,7 @@
 """
 import operator
 import re
+import logging
 from collections import OrderedDict
 from functools import reduce
 
@@ -43,7 +44,6 @@ class CoreModelFilterBankend(BaseFilterBackend):
             elif create_datetime_before:
                 create_filter &= Q(create_datetime__lte=f'{create_datetime_before} 23:59:59')
 
-            # 更新时间范围过滤条件
             update_filter = Q()
             if update_datetime_after and update_datetime_before:
                 update_filter &= Q(update_datetime__gte=update_datetime_after) & Q(update_datetime__lte=update_datetime_before)
@@ -51,9 +51,55 @@ class CoreModelFilterBankend(BaseFilterBackend):
                 update_filter &= Q(update_datetime__gte=update_datetime_after)
             elif update_datetime_before:
                 update_filter &= Q(update_datetime__lte=update_datetime_before)
-            # 结合两个时间范围过滤条件
             queryset = queryset.filter(create_filter & update_filter)
-            return queryset
+
+        model_fields = [f.name for f in queryset.model._meta.fields]
+        base_field = 'date' if 'date' in model_fields else ('create_datetime' if 'create_datetime' in model_fields else None)
+        if base_field:
+            sd = request.query_params.get('start_date')
+            ed = request.query_params.get('end_date')
+            if not sd:
+                sd = request.query_params.get('form[start_date]')
+            if not ed:
+                ed = request.query_params.get('form[end_date]')
+            dl = request.query_params.getlist('date') or request.query_params.getlist('form[date]')
+            if not sd and not ed:
+                d1 = request.query_params.get('date') or request.query_params.get('form[date]')
+                if d1:
+                    sd = d1
+                    ed = d1
+            if not sd and not ed and dl and len(dl) == 2:
+                sd, ed = dl[0], dl[1]
+            tq = request.query_params.get('time_quick') or request.query_params.get('form[time_quick]')
+            if not sd and not ed and tq in ('day','month','year'):
+                from datetime import date as _date
+                import calendar as _calendar
+                today = _date.today()
+                if tq == 'day':
+                    sd = today.isoformat()
+                    ed = today.isoformat()
+                elif tq == 'month':
+                    sd = _date(today.year, today.month, 1).isoformat()
+                    ed = _date(today.year, today.month, _calendar.monthrange(today.year, today.month)[1]).isoformat()
+                elif tq == 'year':
+                    sd = _date(today.year, 1, 1).isoformat()
+                    ed = _date(today.year, 12, 31).isoformat()
+            if sd or ed:
+                field_obj = queryset.model._meta.get_field(base_field)
+                from django.db import models as _models
+                q = Q()
+                s = sd
+                e = ed
+                if isinstance(field_obj, _models.DateTimeField):
+                    if s:
+                        s = f'{s} 00:00:00'
+                    if e:
+                        e = f'{e} 23:59:59'
+                if s:
+                    q &= Q(**{f'{base_field}__gte': s})
+                if e:
+                    q &= Q(**{f'{base_field}__lte': e})
+                queryset = queryset.filter(q)
         return queryset
 
 def get_dept(dept_id: int, dept_all_list=None, dept_list=None):
@@ -210,6 +256,14 @@ class CustomDjangoFilterBackend(DjangoFilterBackend):
     }
     filter_fields = "__all__"
 
+    def sanitize_key(self, key):
+        m = re.findall(r"\[([^\]]+)\]", key)
+        if m:
+            return m[-1]
+        if "." in key:
+            return key.split(".")[-1]
+        return key
+
     def construct_search(self, field_name, lookup_expr=None):
         lookup = self.lookup_prefixes.get(field_name[0])
         if lookup:
@@ -223,11 +277,10 @@ class CustomDjangoFilterBackend(DjangoFilterBackend):
         return field_name
 
     def find_filter_lookups(self, orm_lookups, search_term_key):
+        cleaned_key = self.sanitize_key(search_term_key)
         for lookup in orm_lookups:
-            # if lookup.find(search_term_key) >= 0:
             new_lookup = LOOKUP_SEP.join(lookup.split(LOOKUP_SEP)[:-1]) if len(lookup.split(LOOKUP_SEP)) > 1 else lookup
-            # 修复条件搜索错误 bug
-            if new_lookup == search_term_key:
+            if new_lookup == search_term_key or new_lookup == cleaned_key:
                 return lookup
         return None
 
@@ -394,6 +447,56 @@ class CustomDjangoFilterBackend(DjangoFilterBackend):
             return queryset
         if filterset.__class__.__name__ == "AutoFilterSet":
             queryset = filterset.queryset
+            start_date = filterset.data.get("start_date")
+            end_date = filterset.data.get("end_date")
+            if not start_date or not end_date:
+                for k in filterset.data.keys():
+                    cleaned = self.sanitize_key(k)
+                    if cleaned == "start_date" and not start_date:
+                        start_date = filterset.data.get(k)
+                    elif cleaned == "end_date" and not end_date:
+                        end_date = filterset.data.get(k)
+            time_quick = filterset.data.get("time_quick")
+            if not time_quick:
+                for k in filterset.data.keys():
+                    cleaned = self.sanitize_key(k)
+                    if cleaned == "time_quick":
+                        time_quick = filterset.data.get(k)
+                        break
+            if (not start_date and not end_date) and time_quick in ("day", "month", "year"):
+                from datetime import date as _date
+                import calendar as _calendar
+                today = _date.today()
+                if time_quick == "day":
+                    start_date = today.isoformat()
+                    end_date = today.isoformat()
+                elif time_quick == "month":
+                    start_date = _date(today.year, today.month, 1).isoformat()
+                    end_date = _date(today.year, today.month, _calendar.monthrange(today.year, today.month)[1]).isoformat()
+                elif time_quick == "year":
+                    start_date = _date(today.year, 1, 1).isoformat()
+                    end_date = _date(today.year, 12, 31).isoformat()
+            if start_date or end_date:
+                model_fields = [f.name for f in queryset.model._meta.fields]
+                base_field = "date" if "date" in model_fields else None
+                if base_field is None and "create_datetime" in model_fields:
+                    base_field = "create_datetime"
+                if base_field:
+                    field_obj = queryset.model._meta.get_field(base_field)
+                    q = Q()
+                    start_val = start_date
+                    end_val = end_date
+                    from django.db import models as _models
+                    if isinstance(field_obj, _models.DateTimeField):
+                        if start_val:
+                            start_val = f"{start_val} 00:00:00"
+                        if end_val:
+                            end_val = f"{end_val} 23:59:59"
+                    if start_val:
+                        q &= Q(**{f"{base_field}__gte": start_val})
+                    if end_val:
+                        q &= Q(**{f"{base_field}__lte": end_val})
+                    queryset = queryset.filter(q)
             filter_fields = filterset.filters if self.filter_fields == "__all__" else self.filter_fields
             orm_lookup_dict = dict(
                 zip(
@@ -404,9 +507,11 @@ class CustomDjangoFilterBackend(DjangoFilterBackend):
             orm_lookups = [
                 self.construct_search(lookup, lookup_expr) for lookup, lookup_expr in orm_lookup_dict.items()
             ]
-            # print(orm_lookups)
             conditions = []
             queries = []
+            logging.getLogger(__name__).info(f"filter_keys={list(filterset.data.keys())}")
+            logging.getLogger(__name__).info(f"raw_params={dict(filterset.data.lists())}")
+            logging.getLogger(__name__).info(f"parsed_start_end={{'start_date': {start_date}, 'end_date': {end_date}}}")
             for search_term_key in filterset.data.keys():
                 orm_lookup = self.find_filter_lookups(orm_lookups, search_term_key)
                 if not orm_lookup or filterset.data.get(search_term_key) == '':
@@ -414,11 +519,17 @@ class CustomDjangoFilterBackend(DjangoFilterBackend):
                 filterset_data_len = len(filterset.data.getlist(search_term_key))
                 if filterset_data_len == 1:
                     query = Q(**{orm_lookup: filterset.data[search_term_key]})
+                    # 如果是日期字段且只有一个值，尝试按等于匹配
+                    base_lookup = orm_lookup.split('__')[0]
+                    if base_lookup.endswith('date'):
+                        query = Q(**{f"{base_lookup}": filterset.data[search_term_key]})
                     queries.append(query)
                 elif filterset_data_len == 2:
-                    orm_lookup += '__range'
-                    query = Q(**{orm_lookup: filterset.data.getlist(search_term_key)})
+                    base_lookup = orm_lookup.split('__')[0]
+                    lookup_range = f"{base_lookup}__range"
+                    query = Q(**{lookup_range: filterset.data.getlist(search_term_key)})
                     queries.append(query)
+            logging.getLogger(__name__).info(f"built_queries_count={len(queries)}")
             if len(queries) > 0:
                 conditions.append(reduce(operator.and_, queries))
                 queryset = queryset.filter(reduce(operator.and_, conditions))

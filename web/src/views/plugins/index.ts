@@ -24,11 +24,17 @@ export const scanAndInstallPlugins = (app: any) => {
 	console.log('已发现插件：', pluginsAll);
 	for (const pluginName of pluginsAll) {
 		const plugin = import(`./${pluginName}/index.ts`);
-		plugin.then((module) => {
-			app.use(module.default)
-			console.log(`${pluginName}插件已加载`)
-		}).catch((error) => {
-			console.log(`${pluginName}插件下无index.ts`)
-		})
+		plugin
+			.then((module) => {
+				if (module && module.default) {
+					app.use(module.default);
+					console.log(`${pluginName}插件已加载`);
+				} else {
+					console.log(`${pluginName}插件未导出默认插件，跳过安装`);
+				}
+			})
+			.catch(() => {
+				console.log(`${pluginName}插件下无index.ts`);
+			});
 	}
 };

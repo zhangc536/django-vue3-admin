@@ -7,3 +7,6 @@
 web/package-lock.json
 
 *.bat
+*.deb
+.trae/
+.venv/

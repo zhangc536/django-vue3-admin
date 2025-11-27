@@ -139,42 +139,6 @@ class MessageCenterTargetUserListSerializer(CustomModelSerializer):
         read_only_fields = ["id"]
 
 
-class MessageCenterCreateSerializer(CustomModelSerializer):
-    """
-    消息中心-新增-序列化器
-    """
-
-    def save(self, **kwargs):
-        data = super().save(**kwargs)
-        initial_data = self.initial_data
-        target_type = initial_data.get('target_type')
-        # 在保存之前,根据目标类型,把目标用户查询出来并保存
-        users = initial_data.get('target_user', [])
-        if target_type in [1]:  # 按角色
-            target_role = initial_data.get('target_role', [])
-            users = Users.objects.filter(role__id__in=target_role).values_list('id', flat=True)
-        if target_type in [2]:  # 按部门
-            target_dept = initial_data.get('target_dept', [])
-            users = Users.objects.filter(dept__id__in=target_dept).values_list('id', flat=True)
-        if target_type in [3]:  # 系统通知
-            users = Users.objects.values_list('id', flat=True)
-        targetuser_data = []
-        for user in users:
-            targetuser_data.append({
-                "messagecenter": data.id,
-                "users": user
-            })
-        targetuser_instance = MessageCenterTargetUserSerializer(data=targetuser_data, many=True, request=self.request)
-        targetuser_instance.is_valid(raise_exception=True)
-        targetuser_instance.save()
-        return data
-
-    class Meta:
-        model = MessageCenter
-        fields = "__all__"
-        read_only_fields = ["id"]
-
-
 class MessageCenterViewSet(CustomModelViewSet):
     """
     消息中心接口
@@ -184,55 +148,34 @@ class MessageCenterViewSet(CustomModelViewSet):
     retrieve:单例
     destroy:删除
     """
-    queryset = MessageCenter.objects.order_by('create_datetime')
+    queryset = MessageCenter.objects.all()
     serializer_class = MessageCenterSerializer
-    create_serializer_class = MessageCenterCreateSerializer
-    extra_filter_backends = []
+
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return MessageCenterTargetUserListSerializer
+        return MessageCenterSerializer
 
     def get_queryset(self):
         if self.action == 'list':
-            return MessageCenter.objects.filter(creator=self.request.user.id).all()
+            return MessageCenter.objects.filter(target_user__id=self.request.user.id, target_user__is_active=1)
         return MessageCenter.objects.all()
-
-    def retrieve(self, request, *args, **kwargs):
-        """
-        重写查看
-        """
-        pk = kwargs.get('pk')
-        user_id = self.request.user.id
-        queryset = MessageCenterTargetUser.objects.filter(users__id=user_id, messagecenter__id=pk).first()
-        if queryset:
-            queryset.is_read = True
-            queryset.save()
-        instance = self.get_object()
-        serializer = self.get_serializer(instance)
-        return DetailResponse(data=serializer.data, msg="获取成功")
-
+    
     @action(methods=['GET'], detail=False, permission_classes=[IsAuthenticated])
-    def get_self_receive(self, request):
+    def get_unread_count(self, request):
         """
-        获取接收到的消息
+        获取未读消息数量
         """
-        self_user_id = self.request.user.id
-        # queryset = MessageCenterTargetUser.objects.filter(users__id=self_user_id).order_by('-create_datetime')
-        queryset = MessageCenter.objects.filter(target_user__id=self_user_id)
-        # queryset = self.filter_queryset(queryset)
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = MessageCenterTargetUserListSerializer(page, many=True, request=request)
-            return self.get_paginated_response(serializer.data)
-        serializer = MessageCenterTargetUserListSerializer(queryset, many=True, request=request)
-        return SuccessResponse(data=serializer.data, msg="获取成功")
+        count = MessageCenterTargetUser.objects.filter(users_id=request.user.id, is_read=False).count()
+        return SuccessResponse(data=count, msg="获取成功")
 
     @action(methods=['GET'], detail=False, permission_classes=[IsAuthenticated])
     def get_newest_msg(self, request):
         """
-        获取最新的一条消息
+        获取最新一条消息
         """
-        self_user_id = self.request.user.id
-        queryset = MessageCenterTargetUser.objects.filter(users__id=self_user_id).order_by('create_datetime').last()
-        data = None
+        queryset = MessageCenter.objects.filter(target_user__id=self.request.user.id, target_user__is_active=1).order_by('-create_datetime').first()
         if queryset:
-            serializer = MessageCenterTargetUserListSerializer(queryset.messagecenter, many=False, request=request)
-            data = serializer.data
-        return DetailResponse(data=data, msg="获取成功")
+            serializer = MessageCenterTargetUserListSerializer(queryset, request=request)
+            return SuccessResponse(data=serializer.data, msg="获取成功")
+        return SuccessResponse(data=None, msg="暂无新消息")

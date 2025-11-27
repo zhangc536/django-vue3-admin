@@ -152,13 +152,13 @@ export const createCrudOptions = function ({ crudExpose, context }: CreateCrudOp
                     template.component.name = 'el-date-picker'
                     template.component.props = {
                         type: 'date',
-                        valueFormat: 'yyyy-MM-dd'
+                        valueFormat: 'YYYY-MM-DD'
                     }
                 } else if (value === 3) {
                     template.component.name = 'el-date-picker'
                     template.component.props = {
                         type: 'datetime',
-                        valueFormat: 'yyyy-MM-dd HH:mm:ss'
+                        valueFormat: 'YYYY-MM-DD HH:mm:ss'
                     }
                 } else if (value === 4) {
                     template.component.name = 'el-time-picker'

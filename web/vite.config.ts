@@ -24,25 +24,36 @@ const viteConfig = defineConfig((mode: ConfigEnv) => {
 	return {
 		plugins: [vue(), vueJsx(), vueSetupExtend()],
 		root: process.cwd(),
-		resolve: { alias },
-		base: mode.command === 'serve' ? './' : env.VITE_PUBLIC_PATH,
-		optimizeDeps: {
-			include: ['element-plus/es/locale/lang/zh-cn', 'element-plus/es/locale/lang/en', 'element-plus/es/locale/lang/zh-tw'],
-		},
-		server: {
-			host: '0.0.0.0',
-			port: env.VITE_PORT as unknown as number,
-			open: false,
-			hmr: true,
-			proxy: {
-				'/gitee': {
-					target: 'https://gitee.com',
-					ws: true,
-					changeOrigin: true,
-					rewrite: (path) => path.replace(/^\/gitee/, ''),
-				},
-			},
-		},
+    resolve: { alias },
+    base: mode.command === 'serve' ? '/' : env.VITE_PUBLIC_PATH,
+    optimizeDeps: {
+            include: ['element-plus/es/locale/lang/zh-cn', 'element-plus/es/locale/lang/en', 'element-plus/es/locale/lang/zh-tw', 'screenfull', 'sortablejs'],
+    },
+    server: {
+      host: '0.0.0.0',
+      port: env.VITE_PORT as unknown as number,
+      open: false,
+      hmr: { overlay: false },
+      proxy: {
+        '/api': {
+          target: env.VITE_API_URL,
+          changeOrigin: true,
+          rewrite: (path) => path,
+        },
+        '/api/sse': {
+          target: env.VITE_API_URL,
+          changeOrigin: true,
+          rewrite: (path) => path,
+        },
+        '/sse': {
+          target: (env.VITE_API_URL || '').startsWith('http')
+            ? (env.VITE_API_URL as string).replace(/\/api\/?$/, '/')
+            : (env.VITE_API_URL as string),
+          changeOrigin: true,
+          rewrite: (path) => path,
+        },
+      },
+    },
 		build: {
 			outDir: env.VITE_DIST_PATH || 'dist',
 			chunkSizeWarningLimit: 1500,
