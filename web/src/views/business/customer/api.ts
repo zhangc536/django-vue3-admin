@@ -3,6 +3,12 @@ import qs from 'qs';
 import { UserPageQuery, AddReq, DelReq, EditReq, InfoReq } from '@fast-crud/fast-crud';
 
 export const apiPrefix = '/api/system/customer/';
+export function SendReminder(id: number) {
+  return request({
+    url: apiPrefix + id + '/send_reminder/',
+    method: 'post',
+  });
+}
 
 export function GetList(query: UserPageQuery) {
   const q: any = { ...(query as any) };

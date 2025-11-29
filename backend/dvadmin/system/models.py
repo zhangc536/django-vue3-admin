@@ -473,9 +473,15 @@ class Customer(CoreModel):
     name = models.CharField(max_length=64, verbose_name="客户名称", help_text="客户名称")
     device = models.BigIntegerField(null=True, blank=True, verbose_name="设备", help_text="设备，仅允许数字")
     amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name="收款金额", help_text="收款金额")
+    net_fee = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name="网费", help_text="网费")
+    electric_fee = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name="电费", help_text="电费")
+    depreciation_fee = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name="设备折旧费", help_text="设备折旧费")
+    uploader = models.CharField(max_length=64, null=True, blank=True, verbose_name="上传者", help_text="上传者")
     status = models.BooleanField(default=True, verbose_name="状态", help_text="状态")
     remark = models.CharField(max_length=500, null=True, blank=True, verbose_name="备注", help_text="备注")
     date = models.DateField(default=date.today, null=True, blank=True, verbose_name="日期", help_text="日期")
+    reminder_datetime = models.DateTimeField(null=True, blank=True, verbose_name="提醒时间", help_text="提醒时间")
+    is_reminded = models.BooleanField(default=False, verbose_name="是否已提醒", help_text="是否已提醒")
 
     class Meta:
         db_table = table_prefix + "system_customer"

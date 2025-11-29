@@ -75,11 +75,20 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
       request: { pageRequest, addRequest, editRequest, delRequest },
       rowHandle: {
         fixed: 'right',
-        width: 120,
+        width: 180,
         buttons: {
           view: { show: false },
           edit: { type: 'text' },
           remove: { type: 'text' },
+          sendReminder: {
+            text: '发送提醒',
+            order: 10,
+            click: async ({ row }: any) => {
+              await api.SendReminder(row.id);
+              crudExpose!.doRefresh();
+            },
+            show: (ctx: any) => !ctx.row.is_reminded,
+          },
         },
       },
       columns: {
@@ -186,17 +195,50 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
           form: { component: { props: { min: 0, step: 0.01 } } },
           column: { minWidth: 140 },
         },
+        reminder_datetime: {
+          title: '提醒时间',
+          type: 'datetime',
+          form: { component: { props: { valueFormat: 'YYYY-MM-DD HH:mm:ss' } } },
+          column: { minWidth: 180 },
+        },
+        is_reminded: {
+          title: '已提醒',
+          type: 'switch',
+          form: { show: false },
+          column: { minWidth: 100 },
+        },
+        net_fee: {
+          title: '网费/电费',
+          type: 'number',
+          form: { component: { props: { min: 0, step: 0.01 } } },
+          column: {
+            minWidth: 160,
+            formatter({ row }: any) {
+              const a = row.net_fee ?? null;
+              const b = row.electric_fee ?? null;
+              const fa = typeof a === 'number' || typeof a === 'string' ? a : '';
+              const fb = typeof b === 'number' || typeof b === 'string' ? b : '';
+              return `${fa}${fa !== '' || fb !== '' ? '/' : ''}${fb}`;
+            },
+          },
+        },
+        electric_fee: {
+          title: '电费',
+          type: 'number',
+          form: { component: { props: { min: 0, step: 0.01 } } },
+          column: { show: false },
+        },
+        depreciation_fee: {
+          title: '设备折旧费',
+          type: 'number',
+          form: { component: { props: { min: 0, step: 0.01 } } },
+          column: { minWidth: 140 },
+        },
         device: {
           title: '设备',
           type: 'number',
           form: { component: { props: { min: 0 } } },
           column: { minWidth: 140 },
-        },
-        remark: {
-          title: '备注',
-          type: 'textarea',
-          form: { disabled: true, component: { props: { rows: 3 } } },
-          column: { minWidth: 220 },
         },
         date: {
           title: '日期',
@@ -234,6 +276,43 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
           },
           form: { component: { props: { valueFormat: 'YYYY-MM-DD' } }, value: new Date().toLocaleDateString('en-CA') },
           column: { minWidth: 140 },
+        },
+        uploader: {
+          title: '上传者',
+          type: 'input',
+          form: { disabled: true },
+          column: { minWidth: 160 },
+        },
+        remark: {
+          title: '备注',
+          type: 'dict-select',
+          dict: dict({
+            data: [
+              { label: '梯子费', value: '梯子费' },
+              { label: '管理费', value: '管理费' },
+              { label: '安装费', value: '安装费' },
+            ],
+          }),
+          form: { component: { props: { clearable: true, multiple: true, collapseTags: true, placeholder: '请选择备注类型' } } },
+          column: {
+            minWidth: 220,
+            formatter({ row }: any) {
+              const v = row.remark;
+              if (Array.isArray(v)) return v.join('、');
+              if (typeof v === 'string') return v.split(',').filter(Boolean).join('、');
+              return '';
+            },
+          },
+          valueBuilder(context: any) {
+            const v = context.value;
+            if (Array.isArray(v)) return v;
+            if (typeof v === 'string') return v.split(',').filter(Boolean);
+            return [];
+          },
+          valueResolve(context: any) {
+            const v = context.form.remark;
+            if (Array.isArray(v)) context.form.remark = v.join(',');
+          },
         },
       },
     },

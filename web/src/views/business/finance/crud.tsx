@@ -80,16 +80,7 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
           view: { show: false },
           edit: { type: 'text' },
           remove: { type: 'text' },
-          custom: {
-            text: '发送提醒',
-            icon: 'bell',
-            order: 10,
-            click: async ({ row }: any) => {
-              await api.SendReminder(row.id);
-              crudExpose!.doRefresh();
-            },
-            show: (ctx: any) => !ctx.row.is_reminded,
-          },
+          custom: { show: false },
         },
       },
       columns: {
@@ -218,18 +209,8 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
           form: { component: { props: { min: 0, step: 0.01 } } },
           column: { minWidth: 120 },
         },
-        reminder_datetime: {
-          title: '提醒时间',
-          type: 'datetime',
-          form: { component: { props: { valueFormat: 'YYYY-MM-DD HH:mm:ss' } } },
-          column: { minWidth: 180 },
-        },
-        is_reminded: {
-          title: '已提醒',
-          type: 'switch',
-          form: { show: false },
-          column: { minWidth: 100 },
-        },
+        reminder_datetime: { form: { show: false }, column: { show: false } },
+        is_reminded: { form: { show: false }, column: { show: false } },
       },
     },
   };
