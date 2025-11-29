@@ -13,7 +13,6 @@ import { createCrudOptions } from './crud';
 const { crudBinding, crudRef, crudExpose } = useFs({ createCrudOptions });
 
 onMounted(() => {
-  crudExpose.setSearchFormData({ form: { time_quick: 'day' } });
-  crudExpose.doSearch();
+  crudExpose.doSearch({});
 });
 </script>

@@ -488,6 +488,8 @@ class Finance(CoreModel):
     date = models.DateField(verbose_name="日期", help_text="日期")
     customer_name = models.CharField(max_length=64, verbose_name="客户姓名", help_text="客户姓名")
     amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="金额", help_text="金额")
+    reminder_datetime = models.DateTimeField(null=True, blank=True, verbose_name="提醒时间", help_text="提醒时间")
+    is_reminded = models.BooleanField(default=False, verbose_name="是否已提醒", help_text="是否已提醒")
 
     class Meta:
         db_table = table_prefix + "system_finance"

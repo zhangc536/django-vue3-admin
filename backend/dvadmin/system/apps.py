@@ -8,3 +8,8 @@ class SystemConfig(AppConfig):
     def ready(self):
         # 注册信号
         import dvadmin.system.signals  # 确保路径正确
+        try:
+            from .scheduler import start_reminder_scheduler
+            start_reminder_scheduler()
+        except Exception:
+            pass

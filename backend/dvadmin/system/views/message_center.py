@@ -156,6 +156,11 @@ class MessageCenterViewSet(CustomModelViewSet):
             return MessageCenterTargetUserListSerializer
         return MessageCenterSerializer
 
+    @action(methods=['GET'], detail=False, permission_classes=[IsAuthenticated])
+    def get_unread_count(self, request):
+        count = MessageCenterTargetUser.objects.filter(users_id=request.user.id, is_read=False).count()
+        return SuccessResponse(data=count, msg="获取成功")
+
     def get_queryset(self):
         if self.action == 'list':
             return MessageCenter.objects.filter(target_user__id=self.request.user.id, target_user__is_active=1)

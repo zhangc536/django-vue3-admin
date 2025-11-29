@@ -21,3 +21,7 @@ export function UpdateObj(obj: any) {
 export function DelObj(id: number) {
   return request({ url: apiPrefix + id + '/', method: 'delete', data: { id } });
 }
+
+export function SendReminder(id: number) {
+  return request({ url: apiPrefix + id + '/send_reminder/', method: 'post' });
+}

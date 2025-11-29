@@ -1,5 +1,5 @@
 import * as api from './api';
-import { UserPageQuery, AddReq, DelReq, EditReq, CreateCrudOptionsProps, CreateCrudOptionsRet } from '@fast-crud/fast-crud';
+import { UserPageQuery, AddReq, DelReq, EditReq, CreateCrudOptionsProps, CreateCrudOptionsRet, dict } from '@fast-crud/fast-crud';
 
 export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProps): CreateCrudOptionsRet {
   const pageRequest = async (query: any) => {
@@ -39,6 +39,9 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
     return await api.GetList(q);
   };
   const addRequest = async ({ form }: AddReq) => {
+    if (!form.date) {
+      form.date = new Date().toLocaleDateString('en-CA');
+    }
     return await api.AddObj(form);
   };
   const editRequest = async ({ form, row }: EditReq) => {
@@ -96,18 +99,20 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
         },
         time_quick: {
           title: '时间筛选',
-          type: 'select',
+          type: 'dict-select',
           column: { show: false },
           form: { show: false },
-        search: {
+          dict: dict({
+            data: [
+              { label: '今天', value: 'day' },
+              { label: '本月', value: 'month' },
+              { label: '今年', value: 'year' },
+            ],
+          }),
+          search: {
             show: true,
             component: {
               props: {
-                options: [
-                  { label: '今天', value: 'day' },
-                  { label: '本月', value: 'month' },
-                  { label: '今年', value: 'year' },
-                ],
                 clearable: true,
               },
             },
@@ -131,30 +136,32 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
               }
               context.form.time_quick = value;
             },
-            valueChange(key: any, value: any, form: any) {
-              const baseForm = form ?? (crudExpose?.getSearchFormData?.()?.form ?? {});
-              if (!value) {
+            valueChange: {
+              async handle({ value, form }: any) {
+                const baseForm = form ?? (crudExpose?.getSearchFormData?.()?.form ?? {});
+                if (!value) {
+                  const next = { ...baseForm };
+                  delete next.date;
+                  delete next.time_quick;
+                  delete next.start_date;
+                  delete next.end_date;
+                  crudExpose!.setSearchFormData({ form: next });
+                  crudExpose!.doSearch({});
+                  return;
+                }
+                const r = getRange(value);
                 const next = { ...baseForm };
-                delete next.date;
-                delete next.time_quick;
-                delete next.start_date;
-                delete next.end_date;
-                crudExpose!.setSearchFormData({ form: next });
-                crudExpose!.doSearch();
-                return;
+                const payload: any = { ...next, time_quick: value, date: r };
+                if (Array.isArray(r) && r.length === 2) {
+                  payload.start_date = r[0];
+                  payload.end_date = r[1];
+                } else if (typeof r === 'string' && r) {
+                  payload.start_date = r;
+                  payload.end_date = r;
+                }
+                crudExpose!.setSearchFormData({ form: payload });
+                crudExpose!.doSearch({});
               }
-              const r = getRange(value);
-              const next = { ...baseForm };
-              const payload: any = { ...next, time_quick: value, date: r };
-              if (Array.isArray(r) && r.length === 2) {
-                payload.start_date = r[0];
-                payload.end_date = r[1];
-              } else if (typeof r === 'string' && r) {
-                payload.start_date = r;
-                payload.end_date = r;
-              }
-              crudExpose!.setSearchFormData({ form: payload });
-              crudExpose!.doSearch();
             },
           },
         },
@@ -162,7 +169,15 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
         name: {
           title: '客户名称',
           type: 'input',
-          search: { show: true },
+          search: {
+            show: true,
+            component: {
+              props: {
+                clearable: true,
+                placeholder: '请输入客户名称',
+              },
+            },
+          },
           column: { minWidth: 150 },
         },
         amount: {
@@ -208,16 +223,16 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
                 delete next.start_date;
                 delete next.end_date;
                 crudExpose!.setSearchFormData({ form: next });
-                crudExpose!.doSearch();
+                crudExpose!.doSearch({});
                 return;
               }
               const next = { ...baseForm };
               delete next.time_quick;
               crudExpose!.setSearchFormData({ form: { ...next, date: value, start_date: value[0], end_date: value[1] } });
-              crudExpose!.doSearch();
+              crudExpose!.doSearch({});
             },
           },
-          form: { component: { props: { valueFormat: 'YYYY-MM-DD' } } },
+          form: { component: { props: { valueFormat: 'YYYY-MM-DD' } }, value: new Date().toLocaleDateString('en-CA') },
           column: { minWidth: 140 },
         },
       },
