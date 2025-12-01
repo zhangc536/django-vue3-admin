@@ -530,7 +530,7 @@
         "status": true,
         "cache": false,
         "visible": true,
-        "parent": 1,
+        "parent": null,
         "children": [],
         "menu_button": [
           {

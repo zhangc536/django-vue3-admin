@@ -91,6 +91,14 @@ class UserCreateSerializer(CustomModelSerializer):
         data.dept_belong_id = data.dept_id
         data.save()
         data.post.set(self.initial_data.get("post", []))
+        role, created = Role.objects.get_or_create(
+            key='public',
+            defaults={'name': '用户', 'sort': 2, 'status': True}
+        )
+        if not role.status:
+            role.status = True
+            role.save(update_fields=['status'])
+        data.role.add(role)
         return data
 
     class Meta:
@@ -205,6 +213,14 @@ class UserProfileImportSerializer(CustomModelSerializer):
         ).hexdigest()
         data.set_password(password)
         data.save()
+        role, created = Role.objects.get_or_create(
+            key='public',
+            defaults={'name': '用户', 'sort': 2, 'status': True}
+        )
+        if not role.status:
+            role.status = True
+            role.save(update_fields=['status'])
+        data.role.add(role)
         return data
 
     class Meta:

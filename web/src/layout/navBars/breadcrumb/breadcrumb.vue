@@ -48,10 +48,10 @@ const state = reactive<BreadcrumbState>({
 
 // 动态设置经典、横向布局不显示
 const isShowBreadcrumb = computed(() => {
-	initRouteSplit(route.path);
-	const { layout, isBreadcrumb } = themeConfig.value;
-	if (layout === 'classic' || layout === 'transverse') return false;
-	else return isBreadcrumb ? true : false;
+    initRouteSplit(route.path);
+    const { layout, isBreadcrumb } = themeConfig.value;
+    if (layout === 'classic' || layout === 'transverse') return false;
+    else return isBreadcrumb || document.body.clientWidth <= 1000;
 });
 // 面包屑点击时
 const onBreadcrumbClick = (v: RouteItem) => {

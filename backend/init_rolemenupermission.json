@@ -10,17 +10,27 @@
         "menu__component_name": "menu"
     },
     {
-        "role__key": "public",
+        "role__key": "admin",
+        "menu__web_path": "/business/customer",
+        "menu__component_name": "customer"
+    },
+    {
+        "role__key": "admin",
         "menu__web_path": "/finance",
         "menu__component_name": "finance"
     },
     {
-        "role__key": "public",
+        "role__key": "member",
+        "menu__web_path": "/finance",
+        "menu__component_name": "finance"
+    },
+    {
+        "role__key": "member",
         "menu__web_path": "/messageCenter",
         "menu__component_name": "messageCenter"
     },
     {
-        "role__key": "public",
+        "role__key": "member",
         "menu__web_path": "/business/customer",
         "menu__component_name": "customer"
     }

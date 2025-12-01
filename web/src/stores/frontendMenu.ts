@@ -46,6 +46,17 @@ export function dynamicImport(dynamicViewsModules: Record<string, Function>, com
  * @return {*}
  */
 export const handleMenu = (menuData: Array<any>) => {
+    const needRemove = (item: any) => {
+        const comp = String(item?.component || '');
+        const name = String(item?.name || '');
+        return name === '扫码信息' || item?.web_path === '/releaseInfo' || comp.includes('plugins/scanInfo') || name === '下载中心' || item?.web_path === '/downloadCenter' || comp.includes('system/downloadCenter');
+    };
+    const filterMenus = (list: Array<any>) => {
+        return (list || [])
+            .filter((i) => !needRemove(i))
+            .map((i) => ({ ...i, children: filterMenus(i.children || []) }));
+    };
+    menuData = filterMenus(menuData);
     // 框架内路由
     const frameInRoutes:Array<any> = []
     // 框架外路由

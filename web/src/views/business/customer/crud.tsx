@@ -1,5 +1,9 @@
 import * as api from './api';
-import { UserPageQuery, AddReq, DelReq, EditReq, CreateCrudOptionsProps, CreateCrudOptionsRet, dict } from '@fast-crud/fast-crud';
+import { UserPageQuery, AddReq, DelReq, EditReq, CreateCrudOptionsProps, CreateCrudOptionsRet, dict, compute } from '@fast-crud/fast-crud';
+import { ElMessage } from 'element-plus';
+import { ref, nextTick } from 'vue';
+import XEUtils from 'xe-utils';
+import mittBus from '/@/utils/mitt';
 
 export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProps): CreateCrudOptionsRet {
   const pageRequest = async (query: any) => {
@@ -70,24 +74,123 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
     }
     return [] as any;
   };
+  const ceilMonthsFromDate = (base: Date) => {
+    if (!base || isNaN(base.getTime())) return 0;
+    const today = new Date();
+    const b = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+    const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (t.getTime() < b.getTime()) return 0;
+    let months = (t.getFullYear() - b.getFullYear()) * 12 + (t.getMonth() - b.getMonth());
+    const boundary = new Date(b.getFullYear(), b.getMonth() + months, b.getDate());
+    if (boundary.getTime() > t.getTime()) months += 1;
+    if (months <= 0) months = 1;
+    return months;
+  };
+  const toBoolean = (v: any) => {
+    if (v === true || v === 'true' || v === 'True' || v === 1 || v === '1') return true;
+    if (v === false || v === 'false' || v === 'False' || v === 0 || v === '0') return false;
+    return !!v;
+  };
+  const isMobile = ref<boolean>(document.body.clientWidth < 768);
+  mittBus.on('layoutMobileResize', (res: any) => {
+    isMobile.value = res.clientWidth < 768;
+  });
   return {
     crudOptions: {
       request: { pageRequest, addRequest, editRequest, delRequest },
+      table: {
+        rowKey: 'id',
+        onSelectionChange(changed: any) {
+          const tableData = crudExpose.getTableData();
+          const unChanged = tableData.filter((row: any) => !changed.includes(row));
+          XEUtils.arrayEach(changed, (item: any) => {
+            const ids = XEUtils.pluck(selectedRows.value, 'id');
+            if (!ids.includes(item.id)) {
+              selectedRows.value = XEUtils.union(selectedRows.value, [item]);
+            }
+          });
+          XEUtils.arrayEach(unChanged, (unItem: any) => {
+            selectedRows.value = XEUtils.remove(selectedRows.value, (item: any) => item.id !== unItem.id);
+          });
+        },
+        onRefreshed: () => toggleRowSelection(),
+      },
+      actionbar: {
+        buttons: {
+          batchPaid: {
+            text: '批量标记缴费',
+            type: 'primary',
+            click: async () => {
+              const rows = selectedRows.value ?? [];
+              const ids = rows.map((r: any) => r.id);
+              if (!ids.length) {
+                ElMessage.error('请先选择数据');
+                return;
+              }
+              await api.BulkMarkPaid(ids);
+              ElMessage.success('批量标记缴费成功');
+              crudExpose!.doRefresh();
+            },
+          },
+          batchUnpaid: {
+            text: '批量标记未缴费',
+            click: async () => {
+              const rows = selectedRows.value ?? [];
+              const ids = rows.map((r: any) => r.id);
+              if (!ids.length) {
+                ElMessage.error('请先选择数据');
+                return;
+              }
+              await api.BulkMarkUnpaid(ids);
+              ElMessage.success('批量标记未缴费成功');
+              crudExpose!.doRefresh();
+            },
+          },
+          batchDelete: {
+            text: '批量删除',
+            type: 'danger',
+            click: async () => {
+              const rows = selectedRows.value ?? [];
+              const ids = rows.map((r: any) => r.id);
+              if (!ids.length) {
+                ElMessage.error('请先选择数据');
+                return;
+              }
+              await api.BulkDelete(ids);
+              ElMessage.success('批量删除成功');
+              crudExpose!.doRefresh();
+            },
+          },
+        },
+      },
       rowHandle: {
         fixed: 'right',
-        width: 180,
+        width: compute(() => (isMobile.value ? 140 : 220)),
         buttons: {
           view: { show: false },
           edit: { type: 'text' },
           remove: { type: 'text' },
-          sendReminder: {
-            text: '发送提醒',
-            order: 10,
+          togglePaid: {
+            text: '缴费/取消',
+            order: 11,
             click: async ({ row }: any) => {
-              await api.SendReminder(row.id);
-              crudExpose!.doRefresh();
+              try {
+                const needPay = toBoolean(row.is_need_pay);
+                const paid = toBoolean(row.is_paid);
+                if (paid || !needPay) {
+                  await api.MarkUnpaid(row.id);
+                  ElMessage.success('已取消缴费');
+                } else {
+                  await api.MarkPaid(row.id);
+                  ElMessage.success('已确认缴费');
+                }
+                crudExpose!.doRefresh();
+              } catch (e) {
+                ElMessage.error('操作失败');
+                console.error(e);
+              }
             },
-            show: (ctx: any) => !ctx.row.is_reminded,
+            show: compute(({ row }) => toBoolean(row.is_need_pay) && !toBoolean(row.is_paid)),
           },
         },
       },
@@ -98,12 +201,23 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
           column: {
             align: 'center',
             width: '70px',
+            show: compute(() => !isMobile.value),
             columnSetDisabled: true,
             formatter: (context) => {
               let index = context.index ?? 1;
               let pagination = crudExpose!.crudBinding.value.pagination;
               return ((pagination!.currentPage ?? 1) - 1) * pagination!.pageSize + index + 1;
             },
+          },
+        },
+        $checked: {
+          title: '选择',
+          form: { show: false },
+          column: {
+            type: 'selection',
+            align: 'center',
+            width: compute(() => (isMobile.value ? '40px' : '60px')),
+            columnSetDisabled: true,
           },
         },
         time_quick: {
@@ -187,58 +301,55 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
               },
             },
           },
-          column: { minWidth: 150 },
+          column: { minWidth: compute(() => (isMobile.value ? 140 : 150)) },
         },
         amount: {
           title: '收款金额',
           type: 'number',
           form: { component: { props: { min: 0, step: 0.01 } } },
-          column: { minWidth: 140 },
+          column: { minWidth: compute(() => (isMobile.value ? 120 : 140)) },
         },
-        reminder_datetime: {
-          title: '提醒时间',
-          type: 'datetime',
-          form: { component: { props: { valueFormat: 'YYYY-MM-DD HH:mm:ss' } } },
-          column: { minWidth: 180 },
-        },
-        is_reminded: {
-          title: '已提醒',
-          type: 'switch',
-          form: { show: false },
-          column: { minWidth: 100 },
-        },
+        reminder_datetime: { form: { show: false }, column: { show: false } },
         net_fee: {
           title: '网费/电费',
-          type: 'number',
-          form: { component: { props: { min: 0, step: 0.01 } } },
+          type: 'text',
+          form: { show: false },
           column: {
+            show: compute(() => !isMobile.value),
             minWidth: 160,
             formatter({ row }: any) {
-              const a = row.net_fee ?? null;
-              const b = row.electric_fee ?? null;
-              const fa = typeof a === 'number' || typeof a === 'string' ? a : '';
-              const fb = typeof b === 'number' || typeof b === 'string' ? b : '';
-              return `${fa}${fa !== '' || fb !== '' ? '/' : ''}${fb}`;
+              const base = row.date ? new Date(row.date) : null;
+              if (!base || isNaN(base.getTime())) return '0';
+              const m = ceilMonthsFromDate(base);
+              const dev = Math.max(0, Number(row.device || 0));
+              return String(70 * m * dev);
             },
           },
         },
         electric_fee: {
           title: '电费',
           type: 'number',
-          form: { component: { props: { min: 0, step: 0.01 } } },
+          form: { show: false },
           column: { show: false },
         },
         depreciation_fee: {
           title: '设备折旧费',
-          type: 'number',
-          form: { component: { props: { min: 0, step: 0.01 } } },
-          column: { minWidth: 140 },
+          type: 'text',
+          form: { show: false },
+          column: {
+            show: compute(() => !isMobile.value),
+            minWidth: 140,
+            formatter({ row }: any) {
+              const dev = Math.max(0, Number(row.device || 0));
+              return String(500 * dev);
+            },
+          },
         },
         device: {
           title: '设备',
           type: 'number',
           form: { component: { props: { min: 0 } } },
-          column: { minWidth: 140 },
+          column: { minWidth: 140, show: compute(() => !isMobile.value) },
         },
         date: {
           title: '日期',
@@ -275,13 +386,57 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
             },
           },
           form: { component: { props: { valueFormat: 'YYYY-MM-DD' } }, value: new Date().toLocaleDateString('en-CA') },
-          column: { minWidth: 140 },
+          column: { minWidth: compute(() => (isMobile.value ? 120 : 140)) },
+        },
+        reminder_months: {
+          title: '下次缴费时间',
+          type: 'number',
+          form: { component: { props: { min: 1, step: 1, placeholder: '请输入月数' } } },
+          column: {
+            show: compute(() => !isMobile.value),
+            minWidth: 160,
+            formatter({ row }: any) {
+              const dt = row.reminder_datetime ? new Date(row.reminder_datetime) : null;
+              const next = dt && !isNaN(dt.getTime())
+                ? dt
+                : (() => {
+                    const months = Number(row.reminder_months || 0);
+                    const base = row.date ? new Date(row.date) : new Date();
+                    if (!months || isNaN(months)) return null as any;
+                    return new Date(base.getTime() + months * 30 * 24 * 60 * 60 * 1000);
+                  })();
+              if (!next || isNaN(next.getTime())) return '';
+              const y = next.getFullYear();
+              const m = String(next.getMonth() + 1).padStart(2, '0');
+              const d = String(next.getDate()).padStart(2, '0');
+              return `${y}-${m}-${d}`;
+            },
+          },
+        },
+        is_need_pay: {
+          title: '是否需要缴费',
+          type: 'dict-select',
+          dict: dict({
+            data: [
+              { label: '需缴费', value: true },
+              { label: '不需缴费', value: false },
+            ],
+          }),
+          form: { show: false },
+          column: { minWidth: compute(() => (isMobile.value ? 90 : 100)) },
+          search: {
+            show: true,
+            component: { type: 'dict-select', props: { clearable: true, placeholder: '请选择' } },
+            valueResolve(context: any) {
+              context.form.is_need_pay = context.value;
+            },
+          },
         },
         uploader: {
           title: '上传者',
           type: 'input',
           form: { disabled: true },
-          column: { minWidth: 160 },
+          column: { minWidth: 160, show: compute(() => !isMobile.value) },
         },
         remark: {
           title: '备注',
@@ -295,6 +450,7 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
           }),
           form: { component: { props: { clearable: true, multiple: true, collapseTags: true, placeholder: '请选择备注类型' } } },
           column: {
+            show: compute(() => !isMobile.value),
             minWidth: 220,
             formatter({ row }: any) {
               const v = row.remark;
@@ -317,4 +473,21 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
       },
     },
   };
+};
+
+// 记录选中的行并在刷新后回显
+const selectedRows = ref<any>([]);
+const toggleRowSelection = () => {
+  const tableRef = (crudExpose as any).getBaseTableRef?.();
+  const tableData = (crudExpose as any).getTableData?.();
+  if (!tableRef || !tableData) return;
+  const selected = XEUtils.filter(tableData, (item: any) => {
+    const ids = XEUtils.pluck(selectedRows.value, 'id');
+    return ids.includes(item.id);
+  });
+  nextTick(() => {
+    XEUtils.arrayEach(selected, (item) => {
+      tableRef.toggleRowSelection(item, true);
+    });
+  });
 };

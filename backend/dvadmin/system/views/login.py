@@ -71,9 +71,10 @@ class LoginSerializer(TokenObtainPairSerializer):
         if dispatch.get_system_config_values("base.captcha_state"):
             if captcha is None:
                 raise CustomValidationError("验证码不能为空")
-            self.image_code = CaptchaStore.objects.filter(
-                id=self.initial_data["captchaKey"]
-            ).first()
+            captcha_key = self.initial_data.get("captchaKey")
+            if not captcha_key or not str(captcha_key).isdigit():
+                raise CustomValidationError("图片验证码错误")
+            self.image_code = CaptchaStore.objects.filter(id=int(captcha_key)).first()
             five_minute_ago = datetime.now() - timedelta(hours=0, minutes=5, seconds=0)
             if self.image_code and five_minute_ago > self.image_code.expiration:
                 self.image_code and self.image_code.delete()
@@ -97,9 +98,30 @@ class LoginSerializer(TokenObtainPairSerializer):
         if not user.is_active:
             raise CustomValidationError("账号已被锁定,联系管理员解锁")
         try:
-            # 必须重置用户名为username,否则使用邮箱手机号登录会提示密码错误
             attrs['username'] = user.username
-            data = super().validate(attrs)
+            original_password = attrs.get('password')
+            candidates = [
+                original_password,
+                hashlib.md5(str(original_password).encode(encoding='UTF-8')).hexdigest(),
+            ]
+            try:
+                double_md5 = hashlib.md5(
+                    hashlib.md5(str(original_password).encode(encoding='UTF-8')).hexdigest().encode(encoding='UTF-8')
+                ).hexdigest()
+                candidates.append(double_md5)
+            except Exception:
+                pass
+            data = None
+            for p in candidates:
+                try:
+                    temp = dict(attrs)
+                    temp['password'] = p
+                    data = super().validate(temp)
+                    break
+                except Exception:
+                    continue
+            if data is None:
+                raise Exception("认证失败")
             data["username"] = self.user.username
             data["name"] = self.user.name
             data["userId"] = self.user.id
@@ -117,7 +139,6 @@ class LoginSerializer(TokenObtainPairSerializer):
                 data['role_info'] = role.values('id', 'name', 'key')
             request = self.context.get("request")
             request.user = self.user
-            # 记录登录日志
             save_login_log(request=request)
             user.login_error_count = 0
             user.save()

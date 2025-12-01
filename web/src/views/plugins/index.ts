@@ -9,7 +9,7 @@ export const scanAndInstallPlugins = (app: any) => {
 		const name = key.slice(key.lastIndexOf('/') + 1, key.lastIndexOf('.'));
 		app.component(name, defineAsyncComponent(value as AsyncComponentLoader));
 		const pluginsName = key.match(/\/([^\/]*)\//)?.[1];
-		pluginNames.add(pluginsName);
+		if (pluginsName && pluginsName !== 'scanInfo') pluginNames.add(pluginsName);
 	}
 	const dreamComponents = import.meta.glob('/node_modules/@great-dream/**/*.ts');
 	// 遍历对象并注册异步组件
@@ -18,10 +18,10 @@ export const scanAndInstallPlugins = (app: any) => {
 		const name = key.slice(key.lastIndexOf('/') + 1, key.lastIndexOf('.'));
 		app.component(name, defineAsyncComponent(value as AsyncComponentLoader));
 		const pluginsName = key.match(/\/([^\/]*)\//)?.[1];
-		pluginNames.add(pluginsName);
+		if (pluginsName && pluginsName !== 'scanInfo') pluginNames.add(pluginsName);
 	}
 	pluginsAll = Array.from(pluginNames);
-	console.log('已发现插件：', pluginsAll);
+	console.log('已发现插件（已自动排除 scanInfo）：', pluginsAll);
 	for (const pluginName of pluginsAll) {
 		const plugin = import(`./${pluginName}/index.ts`);
 		plugin

@@ -10,9 +10,56 @@ export function SendReminder(id: number) {
   });
 }
 
+export function MarkPaid(id: number) {
+  return request({
+    url: apiPrefix + id + '/mark_paid/',
+    method: 'post',
+  });
+}
+
+export function MarkUnpaid(id: number) {
+  return request({
+    url: apiPrefix + id + '/mark_unpaid/',
+    method: 'post',
+  });
+}
+
+export function BulkDelete(ids: any) {
+  return request({
+    url: apiPrefix + 'bulk_delete/',
+    method: 'post',
+    data: { ids },
+  });
+}
+
+export function BulkMarkPaid(ids: any) {
+  return request({
+    url: apiPrefix + 'bulk_mark_paid/',
+    method: 'post',
+    data: { ids },
+  });
+}
+
+export function BulkMarkUnpaid(ids: any) {
+  return request({
+    url: apiPrefix + 'bulk_mark_unpaid/',
+    method: 'post',
+    data: { ids },
+  });
+}
+
 export function GetList(query: UserPageQuery) {
   const q: any = { ...(query as any) };
   const f: any = q.form || {};
+  const normalizeBool = (v: any) => {
+    if (v === true || v === 'true' || v === 'True') return 'True';
+    if (v === false || v === 'false' || v === 'False') return 'False';
+    return v;
+  };
+  if (typeof f.is_need_pay !== 'undefined') f.is_need_pay = normalizeBool(f.is_need_pay);
+  if (typeof q.is_need_pay !== 'undefined') q.is_need_pay = normalizeBool(q.is_need_pay);
+  if (typeof f.is_paid !== 'undefined') f.is_paid = normalizeBool(f.is_paid);
+  if (typeof q.is_paid !== 'undefined') q.is_paid = normalizeBool(q.is_paid);
   if (!q.start_date && Array.isArray(q.date) && q.date.length === 2) {
     q.start_date = q.date[0];
     q.end_date = q.date[1];

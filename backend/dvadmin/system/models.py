@@ -482,6 +482,9 @@ class Customer(CoreModel):
     date = models.DateField(default=date.today, null=True, blank=True, verbose_name="日期", help_text="日期")
     reminder_datetime = models.DateTimeField(null=True, blank=True, verbose_name="提醒时间", help_text="提醒时间")
     is_reminded = models.BooleanField(default=False, verbose_name="是否已提醒", help_text="是否已提醒")
+    reminder_months = models.IntegerField(null=True, blank=True, verbose_name="提醒（月）", help_text="提醒（月）")
+    is_paid = models.BooleanField(default=False, verbose_name="是否缴费", help_text="是否缴费")
+    is_need_pay = models.BooleanField(default=False, verbose_name="是否需要缴费", help_text="是否需要缴费")
 
     class Meta:
         db_table = table_prefix + "system_customer"

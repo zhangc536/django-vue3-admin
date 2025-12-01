@@ -99,104 +99,8 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
           },
         },
         
-        time_quick: {
-          title: '时间筛选',
-          type: 'dict-select',
-          column: { show: false },
-          form: { show: false },
-          dict: dict({
-            data: [
-              { label: '今天', value: 'day' },
-              { label: '本月', value: 'month' },
-              { label: '今年', value: 'year' },
-            ],
-          }),
-          search: {
-            show: true,
-            component: { props: { clearable: true } },
-            valueResolve(context: any) {
-              const { value } = context;
-              if (!value) {
-                delete context.form.date;
-                delete context.form.time_quick;
-                delete context.form.start_date;
-                delete context.form.end_date;
-                return;
-              }
-              const r = getRange(value);
-              context.form.date = r;
-              context.form.time_quick = value;
-              if (Array.isArray(r) && r.length === 2) {
-                context.form.start_date = r[0];
-                context.form.end_date = r[1];
-              } else if (typeof r === 'string' && r) {
-                context.form.start_date = r;
-                context.form.end_date = r;
-              }
-            },
-            valueChange: {
-              async handle({ value, form }: any) {
-                const baseForm = form ?? {};
-                if (!value) {
-                  const next = { ...baseForm };
-                  delete next.date;
-                  delete next.time_quick;
-                  delete next.start_date;
-                  delete next.end_date;
-                  crudExpose!.setSearchFormData({ form: next });
-                  crudExpose!.doSearch({});
-                  return;
-                }
-                const r = getRange(value);
-                const next = { ...baseForm, time_quick: value, date: r };
-                if (Array.isArray(r) && r.length === 2) {
-                  next.start_date = r[0];
-                  next.end_date = r[1];
-                } else if (typeof r === 'string' && r) {
-                  next.start_date = r;
-                  next.end_date = r;
-                }
-                crudExpose!.setSearchFormData({ form: next });
-                crudExpose!.doSearch({});
-              },
-            },
-          },
-        },
-        date: {
-          title: '日期',
-          type: 'date',
-          search: {
-            show: true,
-            component: { type: 'daterange', props: { valueFormat: 'YYYY-MM-DD' } },
-            valueResolve(context: any) {
-              const { value } = context;
-              if (value && Array.isArray(value) && value.length === 2) {
-                context.form.date = value;
-                delete context.form.time_quick;
-                context.form.start_date = value[0];
-                context.form.end_date = value[1];
-              }
-            },
-            valueChange(key: any, value: any, form: any) {
-              const baseForm = form ?? {};
-              if (!value || !Array.isArray(value) || value.length !== 2) {
-                const next = { ...baseForm };
-                delete next.date;
-                delete next.start_date;
-                delete next.end_date;
-                crudExpose!.setSearchFormData({ form: next });
-                crudExpose!.doSearch({});
-                return;
-              }
-              const next = { ...baseForm };
-              delete next.time_quick;
-              crudExpose!.setSearchFormData({ form: { ...next, date: value, start_date: value[0], end_date: value[1] } });
-              crudExpose!.doSearch();
-            },
-          },
-          form: { component: { props: { valueFormat: 'YYYY-MM-DD' } }, value: new Date().toLocaleDateString('en-CA') },
-          column: { minWidth: 140 },
-        },
+        
+        
         customer_name: {
           title: '客户姓名',
           type: 'input',
@@ -204,9 +108,15 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
           column: { minWidth: 160 },
         },
         amount: {
-          title: '金额',
+          title: '成本金额',
           type: 'number',
           form: { component: { props: { min: 0, step: 0.01 } } },
+          column: { minWidth: 120 },
+        },
+        income: {
+          title: '金额',
+          type: 'number',
+          form: { show: false },
           column: { minWidth: 120 },
         },
         reminder_datetime: { form: { show: false }, column: { show: false } },

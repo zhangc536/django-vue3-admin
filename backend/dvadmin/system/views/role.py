@@ -122,6 +122,8 @@ class RoleViewSet(CustomModelViewSet, FastCrudMixin,FieldPermissionMixin):
     create_serializer_class = RoleCreateUpdateSerializer
     update_serializer_class = RoleCreateUpdateSerializer
     search_fields = ['name', 'key']
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     @action(methods=['PUT'], detail=True, permission_classes=[IsAuthenticated])
     def set_role_users(self, request, pk):

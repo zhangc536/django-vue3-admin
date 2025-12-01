@@ -204,68 +204,8 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
                         },
                     },
                 },
-                description: {
-                    title: '班次',
-                    search: {
-                        show: true,
-                    },
-                    type: 'input',
-                    column: {
-                        minWidth: 100, //最小列宽
-                    },
-                    form: {
-                        rules: [
-                            // 表单校验规则
-                            {
-                                required: true,
-                                message: '班次必填项',
-                            },
-                        ],
-                        component: {
-                            span: 12,
-                            placeholder: '请输入班次',
-                        }
-                    },
-                },
-                dept: {
-                    title: '部门',
-                    search: {
-                        disabled: true,
-                    },
-                    type: 'dict-tree',
-                    dict: dict({
-                        isTree: true,
-                        url: '/api/system/dept/all_dept/',
-                        value: 'id',
-                        label: 'name'
-                    }),
-                    column: {
-                        minWidth: 200, //最小列宽
-                        formatter({ value, row, index }) {
-                            return row.dept_name_all
-                        }
-                    },
-                    form: {
-                        rules: [
-                            // 表单校验规则
-                            {
-                                required: true,
-                                message: '必填项',
-                            },
-                        ],
-                        component: {
-                            filterable: true,
-                            placeholder: '请选择',
-                            props: {
-                                checkStrictly: true,
-                                props: {
-                                    value: 'id',
-                                    label: 'name',
-                                },
-                            },
-                        },
-                    },
-                },
+                
+                
                 role: {
                     title: '角色',
                     search: {
@@ -299,50 +239,8 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
                         },
                     },
                 },
-                mobile: {
-                    title: '手机号码',
-                    search: {
-                        show: true,
-                    },
-                    type: 'input',
-                    column: {
-                        minWidth: 120, //最小列宽
-                    },
-                    form: {
-                        rules: [
-                            {
-                                max: 20,
-                                message: '请输入正确的手机号码',
-                                trigger: 'blur',
-                            },
-                            {
-                                pattern: /^1[3-9]\d{9}$/,
-                                message: '请输入正确的手机号码',
-                            },
-                        ],
-                        component: {
-                            placeholder: '请输入手机号码',
-                        },
-                    },
-                },
-                email: {
-                    title: '邮箱',
-                    column: {
-                        width: 260,
-                    },
-                    form: {
-                        rules: [
-                            {
-                                type: 'email',
-                                message: '请输入正确的邮箱地址',
-                                trigger: ['blur', 'change'],
-                            },
-                        ],
-                        component: {
-                            placeholder: '请输入邮箱',
-                        },
-                    },
-                },
+                
+                
                 gender: {
                     title: '性别',
                     type: 'dict-select',
@@ -413,12 +311,7 @@ export const createCrudOptions = function ({ crudExpose }: CreateCrudOptionsProp
                         minWidth: 100, //最小列宽
                     },
                 },
-                ...commonCrudConfig({
-                    dept_belong_id: {
-                        form: true,
-                        table: true
-                    }
-                })
+                
             },
         },
     };

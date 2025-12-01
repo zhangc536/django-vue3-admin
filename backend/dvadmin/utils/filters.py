@@ -171,18 +171,12 @@ class DataLevelPermissionsFilter(BaseFilterBackend):
 
     # TODO Rename this here and in `filter_queryset`
     def _extracted_from_filter_queryset_33(self, request, queryset, api, method):
-        # 0. 获取用户的部门id，没有部门则返回空
+        # 0. 获取用户的部门id
         user_dept_id = getattr(request.user, "dept_id", None)
-        if not user_dept_id:
-            return queryset.none()
 
         # 1. 判断过滤的数据是否有创建人所在部门 "dept_belong_id" 字段
         if not getattr(queryset.model, "dept_belong_id", None):
             return queryset
-
-        # 2. 如果用户没有关联角色则返回本部门数据
-        if not hasattr(request.user, "role"):
-            return queryset.filter(dept_belong_id=user_dept_id)
 
         # 3. 根据所有角色 获取所有权限范围
         # (0, "仅本人数据权限"),
@@ -212,6 +206,19 @@ class DataLevelPermissionsFilter(BaseFilterBackend):
                 return queryset
             dataScope_list.append(ele.get("data_range"))
         dataScope_list = list(set(dataScope_list))
+
+        # 2. 如果用户没有关联角色则返回本部门数据或仅本人数据
+        if not hasattr(request.user, "role"):
+            if user_dept_id:
+                return queryset.filter(dept_belong_id=user_dept_id)
+            else:
+                return queryset.filter(creator=request.user)
+
+        # 若缺少部门ID，根据权限范围做降级处理
+        if not user_dept_id:
+            if 0 in dataScope_list:
+                return queryset.filter(creator=request.user)
+            return queryset.none()
 
         # 4. 只为仅本人数据权限时只返回过滤本人数据，并且部门为自己本部门(考虑到用户会变部门，只能看当前用户所在的部门数据)
         if 0 in dataScope_list:

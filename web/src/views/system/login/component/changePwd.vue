@@ -69,7 +69,6 @@ import { useUserInfo } from '/@/stores/userInfo';
 import { DictionaryStore } from '/@/stores/dictionary';
 import { SystemConfigStore } from '/@/stores/systemConfig';
 import { BtnPermissionStore } from '/@/plugin/permission/store.permission';
-import { Md5 } from 'ts-md5';
 import { errorMessage } from '/@/utils/message';
 import { getBaseURL } from "/@/utils/baseUrl";
 import { loginChangePwd } from "/@/views/system/login/api";
@@ -159,7 +158,7 @@ export default defineComponent({
 			if (!formRef.value) return
 			await formRef.value.validate((valid: any) => {
 				if (valid) {
-					loginApi.loginChangePwd({ ...state.ruleForm, password: Md5.hashStr(state.ruleForm.password), password_regain: Md5.hashStr(state.ruleForm.password_regain) }).then((res: any) => {
+                    loginApi.loginChangePwd(state.ruleForm).then((res: any) => {
 						if (res.code === 2000) {
 							if (!themeConfig.value.isRequestRoutes) {
 								// 前端控制路由，2、请注意执行顺序
