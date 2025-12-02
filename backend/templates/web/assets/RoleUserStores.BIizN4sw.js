@@ -1,0 +1,1 @@
+import{B as r}from"./vue.UJNVWY_g.js";const i=r("RoleUserStores",{state:()=>({drawerVisible:!1,role_id:void 0,role_name:void 0}),actions:{handleDrawerOpen(e){this.drawerVisible=!0,this.role_name=e.name,this.role_id=e.id},handleDrawerClose(){this.drawerVisible=!1}}});export{i as R};

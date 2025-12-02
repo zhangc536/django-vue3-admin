@@ -1,0 +1,1 @@
+import{B as e}from"./vue.UJNVWY_g.js";import{g as r}from"./api.qJ_MyuVj.js";import{X as o}from"./index.WrgjqPzT.js";const _=e("RoleUsersStores",{state:()=>({all_users:[],right_users:[]}),actions:{get_all_users(){r().then(s=>{this.$state.all_users=s})},set_right_users(s){this.$state.right_users=o.map(s,t=>t.id)}}});export{_ as R};

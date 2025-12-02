@@ -1,0 +1,1 @@
+import{r as a}from"./index.WrgjqPzT.js";function r(){return a({url:"/api/captcha/",method:"get"})}function e(t){return a({url:"/api/login/",method:"post",data:t})}function n(t){return a({url:"/api/system/user/login_change_password/",method:"post",data:t})}export{n as a,r as g,e as l};

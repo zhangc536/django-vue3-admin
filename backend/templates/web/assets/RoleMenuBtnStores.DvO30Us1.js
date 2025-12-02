@@ -1,0 +1,1 @@
+import{B as n}from"./vue.UJNVWY_g.js";const o=n("RoleMenuBtnStores",{state:()=>[],actions:{setState(t){this.$state=t,this.$state.length=t.length},updateState(t){const e=this.$state.findIndex(s=>s.id===t.id);e!==-1&&(this.$state[e]=t)}}});export{o as R};
